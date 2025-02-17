@@ -56,13 +56,8 @@ cp awx-demo.yml awx-ubuntu.yml
 vi awx-ubuntu.yml
 ```
 ---
-apiVersion: awx.ansible.com/v1beta1
-kind: AWX
-metadata:
-  name: awx-ubuntu
-spec:
-  service_type: nodeport
----
+![image](https://github.com/user-attachments/assets/8dfe0a4a-0b03-40bd-885b-a018befb2267)
+
 
 Step 4: Access AWX Dashboard
 ```
