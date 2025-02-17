@@ -1,119 +1,80 @@
-# Install Ansible AWX
+# Ansible AWX Installation on Ubuntu
 
-This guide provides scripts and configurations to install and set up Ansible AWX, an open-source web-based interface, REST API, and task engine for Ansible.
-
-![AWX Installation](https://github.com/user-attachments/assets/52c7a5af-438c-4f41-9f05-d45f1e1fcaaa)
+This guide details the steps to install Ansible AWX with Docker and Minikube on an Ubuntu system.
 
 ## Prerequisites
 
-Before starting the installation, ensure you have an Ubuntu server (recommended specifications: 4 CPUs and 8 GB RAM) up and running. You will need root or sudo privileges to execute the necessary commands.
+Before you begin the installation, make sure your system meets the following specifications:
+- **RAM**: 8 GB
+- **CPU**: 3.4 GHz with 2 Cores
+- **Hard Disk Space**: 20 GB
+- **Internet Connection**: Required
+- **Minikube**: Pre-installed on your system
 
+## Installation Steps
+
+### Step 1: Install Required Packages
+
+First, log in to your Ubuntu system and install Git and Make:
+
+```bash
+sudo apt install git make -y
+## Step 2: Install Docker and Minikube
+## Update your package list and install Docker:
+
+sudo apt update
+sudo apt install curl
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/docker.gpg
+sudo add-apt-repository "deb [arch=$(dpkg --print-architecture)] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+sudo apt update
+sudo apt -y install docker-ce docker-ce-cli containerd.io docker-compose-plugin docker-registry
+sudo usermod -aG docker $USER
+newgrp docker
+```
+## Install Minikube:
+```
+curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube_latest_amd64.deb
+sudo dpkg -i minikube_latest_amd64.deb
+minikube start --vm-driver=docker --addons=ingress
+sudo snap install kubectl --classic
+```
+## Step 3: Deploy Ansible AWX via Operator
+```
+git clone https://github.com/ansible/awx-operator.git
+cd awx-operator/
+git checkout 2.19.0
+export NAMESPACE=ansible-awx
+make deploy
+kubectl get pods -n ansible-awx
+```
+
+ ## Create a new AWX instance:
+
+```
+
+cp awx-demo.yml awx-ubuntu.yml
+vi awx-ubuntu.yml
+```
+---
+apiVersion: awx.ansible.com/v1beta1
+kind: AWX
+metadata:
+  name: awx-ubuntu
+spec:
+  service_type: nodeport
 ---
 
-## Step 1: Update and Upgrade System Packages
+Step 4: Access AWX Dashboard
+```
+minikube service awx-ubuntu-service --url -n ansible-awx
+kubectl port-forward --address 0.0.0.0 svc/awx-ubuntu-service 8080:80 -n ansible-awx
+```
+Retrieve Admin Password
+Use the following commands to get the admin password:
 
-Run the following commands to update and upgrade your system packages:
-
-```bash
-sudo apt update -y
-sudo apt upgrade -y
+```
+kubectl get secret -n ansible-awx | grep -i password
+kubectl get secret awx-ubuntu-admin-password -o jsonpath="{.data.password}" -n ansible-awx | base64 --decode; echo
 ```
 
-## Step 2: Install Ansible and Required Packages
-
-Use the commands below to install Ansible and the required packages:
-
-```bash
-sudo apt install python-setuptools -y
-sudo apt install python3-pip -y
-sudo pip3 install ansible
-ansible --version
-pip3 install docker==6.1.3
-sudo pip3 install docker-compose
-docker-compose version
-```
-
-## Step 3: Grant Docker Access to the Current User
-
-Run this command to grant Docker access:
-
-```bash
-sudo usermod -aG docker $USER
-```
-
-## Step 4: Install Required Packages for AWX Setup
-
-Install additional packages required for the AWX setup:
-
-```bash
-sudo apt install git vim pwgen -y
-```
-
-## Step 5: Clone the Ansible AWX Repository
-
-Clone the AWX repository using the following command:
-
-```bash
-sudo git clone https://github.com/ansible/awx.git --branch 17.0.1 --depth 1
-```
-
-## Step 6: Generate a Secret Key and Modify the Inventory File
-
-Navigate to the `installer` directory and generate a secret key:
-
-```bash
-cd awx/installer
-pwgen -N 1 -s 30  # to get secretkey
-```
-
-Edit the `inventory` file:
-
-```bash
-sudo vi inventory
-```
-
-Replace the `admin_password` and `secret_key` with your desired values. Here’s a sample inventory file:
-
-```ini
-localhost ansible_connection=local ansible_python_interpreter="/usr/bin/python3"
-
-[all:vars]
-
-dockerhub_base=ansible
-awx_task_hostname=awx
-awx_web_hostname=awxweb
-postgres_data_dir="~/.awx/pgdocker"
-host_port=80
-host_port_ssl=443
-docker_compose_dir="~/.awx/awxcompose"
-
-pg_username=awx
-pg_password=awxpass
-pg_database=awx
-pg_port=5432
-
-admin_user=admin
-admin_password=adminpass
-
-secret_key=yourgeneratedsecretkey
-
-create_preload_data=True
-```
-
-Save the file by pressing `Esc`, then type `:wq`.
-
-## Step 7: Run the Ansible Playbook to Install AWX
-
-Execute the playbook to start the installation:
-
-```bash
-ansible-playbook -i inventory install.yml
-```
-
-## Step 8: Access the AWX Web Interface
-
-After the installation, access the AWX web interface by navigating to `http://your-server-ip` in your web browser. Use the username `admin` and the `admin_password` you specified in the inventory file.
-
-Once you log in, you should see a dashboard similar to the image below:
-
-![AWX Dashboard](https://github.com/user-attachments/assets/f672ddca-a874-4fd9-93cb-3e6e06a88adf)
+![image](https://github.com/user-attachments/assets/c84287a8-498d-4c6a-994c-debb98b32446)
